@@ -19,11 +19,11 @@
   .tabbar button.active{background:var(--fg); color:#fff; border-color:var(--fg);}
   .card{border:1px solid var(--line); border-radius:14px; padding:16px; background:#fff;}
   .grid{display:grid; gap:12px;}
-  @media(min-width:900px){ .grid-2{grid-template-columns:1fr 1fr;} }
+  @media(min-width:1100px){ .grid-2{grid-template-columns:1fr 1fr;} }
   label{display:block; font-weight:600; margin:8px 0 6px;}
   select, input[type="text"], textarea{width:100%; padding:10px; border:1px solid var(--line); border-radius:10px;}
   .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .range-row{display:grid; grid-template-columns:minmax(180px, 380px) 1fr 56px 96px; align-items:center; gap:10px; margin:6px 0;}
+  .range-row{display:grid; grid-template-columns:minmax(180px, 380px) 1fr 56px 120px; align-items:center; gap:10px; margin:6px 0;}
   input[type="range"]{width:100%;}
   .pill{display:inline-block; padding:6px 10px; border-radius:999px; background:var(--pill); color:#111827; font-size:12px;}
   .muted{color:#6b7280; font-size:12px;}
@@ -156,6 +156,10 @@
     </div>
     <div class="muted" data-i="weightsNote">Weights auto-normalize to 100% when calculating the overall score.</div>
 
+    <h2 data-i="participation">Participation</h2>
+    <div id="partCounts" class="muted"></div>
+    <canvas id="partChart" width="900" height="260" style="margin-top:10px;"></canvas>
+
     <h2 data-i="responses">Responses</h2>
     <table class="table" id="respTable">
       <thead><tr>
@@ -233,6 +237,7 @@ const I = {
       resOverview:"Results Overview", cat:"Category", avg:"Average",
       overall:"Overall Weighted Score:", chart:"Summary Chart", weights:"Weights (by role)",
       weightsNote:"Weights auto-normalize to 100% when calculating the overall score.",
+      participation:"Participation", total:"Total",
       responses:"Responses", thTime:"Time", thRole:"Role", thA:"A", thB:"B", thC:"C", thOverall:"Overall",
       export:"Export JSON", reset:"Reset all data", methTitle:"Methodology",
       methText:"Participants: Football Director, Head Coach, Technical Staff, Players, Medical, Administrative. Scope: year-round evaluation (not only the current pitch). Scoring: 1–5 with 'N/A' to exclude items from averages. Weighted summary by role.",
@@ -263,8 +268,8 @@ const I = {
       comments:"ملاحظات عامة (اختياري)", submit:"تسجيل التقييم", clear:"مسح النموذج",
       resOverview:"نظرة عامة على النتائج", cat:"الفئة", avg:"المتوسط",
       overall:"المتوسط العام المُرجّح:", chart:"مخطط موجز", weights:"الأوزان حسب الدور",
-      weightsNote:"تُطبّع الأوزان إلى 100% عند الحساب.", responses:"الاستجابات",
-      thTime:"الوقت", thRole:"الصفة", thA:"أ", thB:"ب", thC:"ج", thOverall:"إجمالي",
+      weightsNote:"تُطبّع الأوزان إلى 100% عند الحساب.", participation:"المشاركة", total:"الإجمالي",
+      responses:"الاستجابات", thTime:"الوقت", thRole:"الصفة", thA:"أ", thB:"ب", thC:"ج", thOverall:"إجمالي",
       export:"تصدير JSON", reset:"إعادة ضبط البيانات", methTitle:"المنهجية",
       methText:"المشاركون: مدير الكرة، المدير الفني، الجهاز الفني، اللاعبون، الفريق الطبي، والفريق الإداري. النطاق: تقييم على مدار العام (وليس الحالة الحالية فقط). التقييم من 1 إلى 5 مع خيار 'غير ذي صلة' لاستبعاد العناصر من المتوسط. ملخص مُرجّح حسب الأدوار.",
       qrTitle:"رمز الاستجابة السريعة (QR)", qrLabel:"الرابط المستهدف:", genQR:"توليد QR", saveQR:"حفظ QR كصورة",
@@ -394,8 +399,13 @@ function renderSummary(){
   const data = loadAll();
   const roles = ["football_director","head_coach","technical_staff","player","medical","administrative"];
   const counts = {}; roles.forEach(r=>counts[r]=0); data.forEach(r=> counts[r.role]=(counts[r.role]||0)+1 );
-  document.getElementById('counts').textContent = roles.map(r => `${roleLabel(r,lang)}: ${counts[r]||0}`).join(' • ');
 
+  // Participation text line with Total + per role
+  const total = data.length;
+  const partText = `${I[lang].total}: ${total} • ` + roles.map(r => `${roleLabel(r,lang)}: ${counts[r]||0}`).join(' • ');
+  document.getElementById('counts').textContent = partText;
+
+  // Averages
   const avg = (k)=> data.length? (data.reduce((s,r)=>s+r[k],0)/data.length):0;
   const avgA = avg('A'), avgB = avg('B'), avgC = avg('C');
   const tbody = document.querySelector('#avgTable tbody'); tbody.innerHTML='';
@@ -408,7 +418,7 @@ function renderSummary(){
     tbody.appendChild(tr);
   });
 
-  // weights
+  // weights + overall weighted
   const w = {
     head_coach: parseInt(document.getElementById('w_hc').value,10),
     football_director: parseInt(document.getElementById('w_fd').value,10),
@@ -421,7 +431,7 @@ function renderSummary(){
   function avgRole(role){
     const rs = data.filter(r=>r.role===role);
     return rs.length? (rs.reduce((s,r)=>s+r.overall,0)/rs.length):0;
-  }
+    }
   let overallWeighted = 0;
   Object.keys(w).forEach(role=>{ overallWeighted += (avgRole(role) * w[role]); });
   overallWeighted /= sumW;
@@ -468,12 +478,19 @@ function renderSummary(){
     if (box) box.textContent = msg || '–';
   })();
 
-  // chart
+  // charts
   drawBarChart('barChart', [avgA, avgB, avgC, overallWeighted],
-    [(lang==='ar'?'أ':'A'), (lang==='ar'?'ب':'B'), (lang==='ar'?'ج':'C'), (lang==='ar'?'العام':'Overall')]);
+    [(lang==='ar'?'أ':'A'), (lang==='ar'?'ب':'B'), (lang==='ar'?'ج':'C'), (lang==='ar'?'العام':'Overall')], 5);
+
+  // participation chart
+  const partLabels = roles.map(r=>roleLabel(r,lang));
+  const partVals = roles.map(r=>counts[r]||0);
+  const maxPart = Math.max(5, ...partVals); // dynamic max so bars scale
+  document.getElementById('partCounts').textContent = partText;
+  drawBarChart('partChart', partVals, partLabels, maxPart);
 }
 
-// listeners for weights
+// weights listeners
 ['w_hc','w_fd','w_ts','w_pl','w_md','w_ad'].forEach(id=>{
   document.getElementById(id).addEventListener('input', ()=>{ 
     document.getElementById(id+'_v').textContent = document.getElementById(id).value; 
@@ -528,26 +545,27 @@ document.getElementById('btnPDF').addEventListener('click', ()=>{ renderSummary(
   }
 })();
 
-// simple bar chart
-function drawBarChart(id, vals, labels){
+// generic bar chart (with dynamic max)
+function drawBarChart(id, vals, labels, maxVal){
   const c = document.getElementById(id), ctx = c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
-  const pad=30, W=c.width, H=c.height, max=5;
+  const pad=30, W=c.width, H=c.height;
+  const max = Math.max(1, maxVal || 5);
   const bw = (W - pad*2) / vals.length * 0.6;
   const gap = (W - pad*2) / vals.length * 0.4;
+  ctx.strokeStyle='#e5e7eb'; ctx.beginPath(); ctx.moveTo(pad, H - pad); ctx.lineTo(W - pad, H - pad); ctx.stroke();
   vals.forEach((v,i)=>{
     const x = pad + i*(bw+gap);
-    const h = (H - pad*2) * (v/max);
+    const h = (H - pad*2) * ((v||0)/max);
     const y = H - pad - h;
     ctx.fillStyle = '#111827'; ctx.fillRect(x, y, bw, h);
     ctx.fillStyle = '#6b7280'; ctx.textAlign='center';
     ctx.fillText(labels[i], x+bw/2, H - pad + 16);
-    ctx.fillText(v ? v.toFixed(2):'–', x+bw/2, y - 4);
+    ctx.fillText((v!==undefined && v!==null) ? String(v) : '–', x+bw/2, y - 4);
   });
-  ctx.strokeStyle='#e5e7eb'; ctx.beginPath(); ctx.moveTo(pad, H - pad); ctx.lineTo(W - pad, H - pad); ctx.stroke();
 }
 
-// QR placeholder (client-side pseudo QR so you can download a PNG; swap with real QR lib later if needed)
+// QR placeholder (client-side pseudo QR so you can download a PNG)
 function drawFakeQR(text, size){
   const c = document.getElementById('qrCanvas'), ctx=c.getContext('2d');
   ctx.clearRect(0,0,size,size);
