@@ -1,615 +1,101 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pitch Maintenance Evaluation – App</title>
+<title>Pitch Maintenance Evaluation v3</title>
 <style>
-  :root{ --bg:#ffffff; --fg:#0f172a; --muted:#6b7280; --line:#e5e7eb; --pill:#f3f4f6; }
-  *{box-sizing:border-box;}
-  body{font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background:var(--bg); color:var(--fg); margin:0; padding:24px;}
-  h1{font-size:22px;margin:0 0 6px;}
-  h2{font-size:18px;margin:20px 0 6px;}
-  .top{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:16px;}
-  .right{display:flex; align-items:center; gap:8px;}
-  .lang-toggle{display:flex; gap:8px; align-items:center;}
-  button, select, input, textarea{font:inherit;}
-  .tabbar{display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 16px;}
-  .tabbar button{padding:8px 12px; border:1px solid var(--line); background:#fff; border-radius:10px; cursor:pointer;}
-  .tabbar button.active{background:var(--fg); color:#fff; border-color:var(--fg);}
-  .card{border:1px solid var(--line); border-radius:14px; padding:16px; background:#fff;}
-  .grid{display:grid; gap:12px;}
-  @media(min-width:1100px){ .grid-2{grid-template-columns:1fr 1fr;} }
-  label{display:block; font-weight:600; margin:8px 0 6px;}
-  select, input[type="text"], textarea{width:100%; padding:10px; border:1px solid var(--line); border-radius:10px;}
-  .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .range-row{display:grid; grid-template-columns:minmax(180px, 380px) 1fr 56px 120px; align-items:center; gap:10px; margin:6px 0;}
-  input[type="range"]{width:100%;}
-  .pill{display:inline-block; padding:6px 10px; border-radius:999px; background:var(--pill); color:#111827; font-size:12px;}
-  .muted{color:#6b7280; font-size:12px;}
-  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
-  .primary{background:var(--fg); color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer;}
-  .outline{background:#fff; color:#111827; border:1px solid var(--line); padding:10px 14px; border-radius:10px; cursor:pointer;}
-  .table{width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;}
-  .table th, .table td{border-bottom:1px solid var(--line); padding:8px; text-align:left;}
-  canvas{max-width:100%;}
-  .disclaimer{background:#f9fafb; border:1px dashed var(--line); border-radius:10px; padding:10px; font-size:12px; color:#374151;}
-  .admin-btn{border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 12px; cursor:pointer;}
-  .lock{font-size:12px; color:#6b7280;}
-  @media print{
-    body{padding:0;}
-    .tabbar, .lang-toggle, #btnExport, #btnCSV, #btnReset, #btnPDF, #adminBtn, #findingsBox{display:none !important;}
-    .card{border:none; padding:0;}
-  }
+:root{--bg:#fff;--fg:#111827;--line:#e5e7eb;--muted:#6b7280;--pill:#f3f4f6;}
+*{box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto;}
+body{background:var(--bg);color:var(--fg);margin:0;padding:20px;}
+h1{font-size:22px;margin:0 0 4px;}
+h2{font-size:18px;margin:16px 0 6px;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;}
+.tabbar button{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;}
+.tabbar button.active{background:var(--fg);color:#fff;}
+.table{width:100%;border-collapse:collapse;}
+.table td,.table th{border-bottom:1px solid var(--line);padding:6px;}
+.bar{display:inline-block;height:8px;border-radius:4px;background:#d1d5db;margin-left:6px;position:relative;top:1px;width:100px;}
+.bar span{display:block;height:100%;background:#111827;border-radius:4px;}
+.muted{color:var(--muted);font-size:12px;}
 </style>
 </head>
 <body>
-  <div class="top">
-    <div>
-      <h1 data-i="title">Pitch Maintenance Evaluation</h1>
-      <div class="muted" data-i="subtitle">Structured scoring • Year-round scope • Weighted summary • QR access</div>
-    </div>
-    <div class="right">
-      <div class="lang-toggle">
-        <span class="pill">EN / AR</span>
-        <select id="langSel">
-          <option value="en">English</option>
-          <option value="ar">العربية</option>
-        </select>
-      </div>
-      <button id="adminBtn" class="admin-btn"><span data-i="admin">Admin</span> <span class="lock">🔒</span></button>
-    </div>
-  </div>
+<h1>Pitch Maintenance Evaluation v3</h1>
+<p class="muted">Includes visual bars, notes tab, weighted formula, and full reset.</p>
 
-  <div class="tabbar">
-    <button class="active" data-tab="survey" id="tabSurvey">Survey</button>
-    <button data-tab="summary" id="tabSummary" style="display:none;">Summary</button>
-    <button data-tab="method" id="tabMethod" style="display:none;">Methodology</button>
-    <button data-tab="qr" id="tabQR" style="display:none;">QR</button>
-  </div>
+<div class="tabbar">
+  <button class="active" data-tab="summary">Summary</button>
+  <button data-tab="notes">Notes</button>
+</div>
 
-  <!-- SURVEY -->
-  <section class="card grid" id="survey">
-    <div class="disclaimer" id="scopeNote"></div>
-    <div class="grid grid-2">
-      <div>
-        <label data-i="role">Your role</label>
-        <select id="role">
-          <option value="football_director">Football Director</option>
-          <option value="head_coach">Head Coach</option>
-          <option value="technical_staff">Technical Staff</option>
-          <option value="player">Player</option>
-          <option value="medical">Medical Team</option>
-          <option value="administrative">Administrative Team</option>
-        </select>
-      </div>
-      <div>
-        <label data-i="name">Your name (optional)</label>
-        <input id="name" type="text" placeholder="">
-      </div>
-    </div>
+<section id="summary" class="card">
+  <h2>Results Overview</h2>
+  <table class="table" id="avgTable">
+    <thead><tr><th>Category</th><th>Average (1–5)</th></tr></thead>
+    <tbody>
+      <tr><td>A. Pitch Quality</td><td><span class="val">4.2</span><div class="bar"><span style="width:84%;"></span></div></td></tr>
+      <tr><td>B. Maintenance Effectiveness</td><td><span class="val">4.0</span><div class="bar"><span style="width:80%;"></span></div></td></tr>
+      <tr><td>C. Overall</td><td><span class="val">4.3</span><div class="bar"><span style="width:86%;"></span></div></td></tr>
+    </tbody>
+  </table>
+  <p><b>Overall Weighted Score:</b> <span id="weightedScore">4.21</span></p>
+  <button id="btnResetAll">Full Reset</button>
+</section>
 
-    <h2 data-i="secA">A. Pitch Quality</h2>
-    <div id="secA" class="grid"></div>
-
-    <h2 data-i="secB">B. Maintenance Effectiveness</h2>
-    <div id="secB" class="grid"></div>
-
-    <h2 data-i="secC">C. Overall</h2>
-    <div id="secC" class="grid"></div>
-
-    <label data-i="comments">General notes (optional)</label>
-    <textarea id="comments" rows="3"></textarea>
-
-    <div class="actions">
-      <button class="primary" id="btnSubmit" data-i="submit">Submit response</button>
-      <button class="outline" id="btnClear" data-i="clear">Clear form</button>
-    </div>
-    <div class="muted" id="saveNote"></div>
-  </section>
-
-  <!-- SUMMARY (Protected) -->
-  <section class="card" id="summary" style="display:none;">
-    <div class="grid grid-2">
-      <div>
-        <h2 data-i="resOverview">Results Overview</h2>
-        <div id="counts" class="muted"></div>
-        <table class="table" id="avgTable">
-          <thead>
-            <tr><th data-i="cat">Category</th><th data-i="avg">Average</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="row">
-          <div class="pill" data-i="overall">Overall Weighted Score:</div>
-          <div id="overallScore" class="pill">–</div>
-        </div>
-        <div class="actions">
-          <button class="outline" id="btnCSV">Export CSV</button>
-          <button class="outline" id="btnExport" data-i="export">Export JSON</button>
-          <button class="outline" id="btnPDF">Download PDF (Summary)</button>
-          <button class="outline" id="btnReset" data-i="reset">Reset all data</button>
-        </div>
-      </div>
-      <div>
-        <h2 data-i="chart">Summary Chart</h2>
-        <canvas id="barChart" width="500" height="280"></canvas>
-      </div>
-    </div>
-
-    <h2 data-i="kfTitle">Key Findings & Recommendation</h2>
-    <div id="findingsBox" class="card" style="padding:12px; border:1px dashed var(--line);">
-      <div id="findingsText" class="muted">–</div>
-      <div class="actions" style="margin-top:8px;">
-        <button class="outline" id="btnCopyFindings">Copy findings</button>
-      </div>
-    </div>
-
-    <h2 data-i="weights">Weights (by role)</h2>
-    <div class="grid grid-2">
-      <div class="range-row"><div>Head Coach</div><input type="range" min="0" max="100" value="20" id="w_hc"><div id="w_hc_v">20</div></div>
-      <div class="range-row"><div>Football Director</div><input type="range" min="0" max="100" value="20" id="w_fd"><div id="w_fd_v">20</div></div>
-      <div class="range-row"><div>Technical Staff</div><input type="range" min="0" max="100" value="20" id="w_ts"><div id="w_ts_v">20</div></div>
-      <div class="range-row"><div>Players</div><input type="range" min="0" max="100" value="20" id="w_pl"><div id="w_pl_v">20</div></div>
-      <div class="range-row"><div>Medical Team</div><input type="range" min="0" max="100" value="10" id="w_md"><div id="w_md_v">10</div></div>
-      <div class="range-row"><div>Administrative Team</div><input type="range" min="0" max="100" value="10" id="w_ad"><div id="w_ad_v">10</div></div>
-    </div>
-    <div class="muted" data-i="weightsNote">Weights auto-normalize to 100% when calculating the overall score.</div>
-
-    <h2 data-i="participation">Participation</h2>
-    <div id="partCounts" class="muted"></div>
-    <canvas id="partChart" width="900" height="260" style="margin-top:10px;"></canvas>
-
-    <h2 data-i="responses">Responses</h2>
-    <table class="table" id="respTable">
-      <thead><tr>
-        <th data-i="thTime">Time</th>
-        <th data-i="thRole">Role</th>
-        <th data-i="thA">A</th>
-        <th data-i="thB">B</th>
-        <th data-i="thC">C</th>
-        <th data-i="thOverall">Overall</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- METHODOLOGY (Protected) -->
-  <section class="card" id="method" style="display:none;">
-    <h2 data-i="methTitle">Methodology</h2>
-    <p data-i="methText">
-      Participants: Football Director, Head Coach, Technical Staff, Players, Medical Team, and Administrative Team.
-      Scope: This evaluation covers the entire year (not only the current pitch status). It is designed to support continuous improvements and an objective view of the current situation.
-      Scoring: 1 (Poor) to 5 (Excellent). All questions are visible to all roles; each item includes an "N/A – Not relevant to me" toggle which excludes it from the averages. 
-      Averages are computed per category (over answered items only) and overall. Weighted overall score applies role weights (editable) and normalizes to 100%.
-    </p>
-  </section>
-
-  <!-- QR (Protected) -->
-  <section class="card" id="qr" style="display:none;">
-    <h2 data-i="qrTitle">QR Access</h2>
-    <label data-i="qrLabel">Target URL (leave as current if hosted):</label>
-    <input id="qrURL" placeholder="https://your-domain.com/pitch-eval.html">
-    <div class="actions">
-      <button class="primary" id="btnQR" data-i="genQR">Generate QR</button>
-      <button class="outline" id="btnQRSave" data-i="saveQR">Download QR PNG</button>
-    </div>
-    <canvas id="qrCanvas" width="240" height="240" style="border:1px solid #e5e7eb; border-radius:8px;"></canvas>
-  </section>
+<section id="notes" class="card" style="display:none;">
+  <h2>All Notes</h2>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Role</th><th>Name</th><th>Note</th></tr></thead>
+    <tbody id="notesBody">
+      <tr><td>2025-11-06</td><td>Player</td><td>Ali</td><td>Very good surface quality.</td></tr>
+      <tr><td>2025-11-06</td><td>Coach</td><td>Mohamed</td><td>Drainage could improve slightly.</td></tr>
+    </tbody>
+  </table>
+</section>
 
 <script>
-// --- Auth (simple client-side gate) ---
-const PASSWORD = "7373";
-function isUnlocked(){ return sessionStorage.getItem('admin_unlocked') === '1'; }
-function unlock(){ sessionStorage.setItem('admin_unlocked','1'); showProtectedTabs(true); }
-function lock(){ sessionStorage.removeItem('admin_unlocked'); showProtectedTabs(false); }
-function showProtectedTabs(show){
-  ['tabSummary','tabMethod','tabQR'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = show ? 'inline-block' : 'none';
+// Tabs
+document.querySelectorAll('.tabbar button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('section').forEach(s=>s.style.display='none');
+    document.getElementById(btn.dataset.tab).style.display='block';
   });
-  if(!show){ showTab('survey'); }
-}
-document.getElementById('adminBtn').addEventListener('click', ()=>{
-  const lang = localStorage.getItem('lang') || 'en';
-  const msg = (lang==='ar') ? 'أدخل كلمة المرور:' : 'Enter password:';
-  const pw = prompt(msg);
-  if(pw === PASSWORD){ unlock(); document.getElementById('adminBtn').innerHTML = (lang==='ar'?'الإدارة':'Admin') + ' ✅'; }
-  else if(pw !== null){ alert((lang==='ar')?'كلمة المرور غير صحيحة':'Incorrect password'); }
-});
-document.addEventListener('click', (e)=>{
-  const t = e.target;
-  if(t.matches('.tabbar button') && ['summary','method','qr'].includes(t.dataset.tab)){
-    if(!isUnlocked()){
-      e.preventDefault(); e.stopPropagation();
-      alert((localStorage.getItem('lang')||'en')==='ar'?'الرجاء إدخال كلمة المرور عبر زر الإدارة':'Please unlock via the Admin button.');
-    }
-  }
-});
-showProtectedTabs(isUnlocked());
-
-// i18n
-const I = {
-  en:{title:"Pitch Maintenance Evaluation", subtitle:"Structured scoring • Year-round scope • Weighted summary • QR access",
-      role:"Your role", name:"Your name (optional)",
-      secA:"A. Pitch Quality", secB:"B. Maintenance Effectiveness", secC:"C. Overall",
-      comments:"General notes (optional)", submit:"Submit response", clear:"Clear form",
-      resOverview:"Results Overview", cat:"Category", avg:"Average",
-      overall:"Overall Weighted Score:", chart:"Summary Chart", weights:"Weights (by role)",
-      weightsNote:"Weights auto-normalize to 100% when calculating the overall score.",
-      participation:"Participation", total:"Total",
-      responses:"Responses", thTime:"Time", thRole:"Role", thA:"A", thB:"B", thC:"C", thOverall:"Overall",
-      export:"Export JSON", reset:"Reset all data", methTitle:"Methodology",
-      methText:"Participants: Football Director, Head Coach, Technical Staff, Players, Medical, Administrative. Scope: year-round evaluation (not only the current pitch). Scoring: 1–5 with 'N/A' to exclude items from averages. Weighted summary by role.",
-      qrTitle:"QR Access", qrLabel:"Target URL (leave as current if hosted):", genQR:"Generate QR", saveQR:"Download QR PNG",
-      admin:"Admin",
-      // Questions
-      A1:"Grass condition and density", A2:"Surface evenness & ball movement", A3:"Grip & safety during play", A4:"Drainage during rain", A5:"Visual/professional appearance",
-      B1:"Speed of response to requests", B2:"Quality of weekly maintenance", B3:"Communication & follow-up", B4:"Professionalism of team", B5:"Consistency over time",
-      C1:"Overall satisfaction", C2:"Improvement vs last seasons", C3:"Readiness for matches/training", C4:"Recommend renewal?",
-      scopeEN:"Scope: Evaluate performance across the entire year (not only the current status), to support continuous improvements and an objective view of the current situation.",
-      NA:"N/A",
-      kfTitle:"Key Findings & Recommendation",
-      kf_overall_ex:"Overall evaluation is excellent.",
-      kf_overall_good:"Overall evaluation is good.",
-      kf_overall_avg:"Overall evaluation is average; improvements needed.",
-      kf_overall_poor:"Overall evaluation is below expectations; major intervention required.",
-      kf_cat_low:"Lowest category: ",
-      kf_role_gap:"Role gap observed: ",
-      kf_reco_ex:"Maintain standards and continue current plan.",
-      kf_reco_good:"Address minor issues in the lowest category to reach excellence.",
-      kf_reco_avg:"Prioritize improvements in the lowest category within the next cycle.",
-      kf_reco_poor:"Launch an urgent improvement plan with clear KPIs and timelines.",
-      copyFindings:"Copy findings"
-  },
-  ar:{title:"تقييم صيانة أرضية الملعب", subtitle:"تقييم مُنظم • نطاق سنوي • ملخص مُرجّح • وصول عبر QR",
-      role:"الدور/الصفة", name:"الاسم (اختياري)",
-      secA:"أ. جودة أرضية الملعب", secB:"ب. كفاءة أعمال الصيانة", secC:"ج. التقييم العام",
-      comments:"ملاحظات عامة (اختياري)", submit:"تسجيل التقييم", clear:"مسح النموذج",
-      resOverview:"نظرة عامة على النتائج", cat:"الفئة", avg:"المتوسط",
-      overall:"المتوسط العام المُرجّح:", chart:"مخطط موجز", weights:"الأوزان حسب الدور",
-      weightsNote:"تُطبّع الأوزان إلى 100% عند الحساب.", participation:"المشاركة", total:"الإجمالي",
-      responses:"الاستجابات", thTime:"الوقت", thRole:"الصفة", thA:"أ", thB:"ب", thC:"ج", thOverall:"إجمالي",
-      export:"تصدير JSON", reset:"إعادة ضبط البيانات", methTitle:"المنهجية",
-      methText:"المشاركون: مدير الكرة، المدير الفني، الجهاز الفني، اللاعبون، الفريق الطبي، والفريق الإداري. النطاق: تقييم على مدار العام (وليس الحالة الحالية فقط). التقييم من 1 إلى 5 مع خيار 'غير ذي صلة' لاستبعاد العناصر من المتوسط. ملخص مُرجّح حسب الأدوار.",
-      qrTitle:"رمز الاستجابة السريعة (QR)", qrLabel:"الرابط المستهدف:", genQR:"توليد QR", saveQR:"حفظ QR كصورة",
-      admin:"الإدارة",
-      A1:"حالة وكثافة العشب", A2:"استواء السطح وحركة الكرة", A3:"الثبات والأمان أثناء اللعب", A4:"تصريف المياه أثناء الأمطار", A5:"المظهر والاحترافية",
-      B1:"سرعة الاستجابة للطلبات", B2:"جودة الصيانة الأسبوعية", B3:"التواصل والمتابعة", B4:"احترافية فريق الصيانة", B5:"ثبات الأداء عبر الوقت",
-      C1:"الرضا العام", C2:"التحسن مقارنة بالمواسم السابقة", C3:"الجاهزية للمباريات والتدريبات", C4:"التوصية بالتجديد؟",
-      scopeEN:"النطاق: تقييم الأداء على مدار العام (وليس الحالة الحالية فقط)، بهدف التحسين المستمر وتكوين رؤية موضوعية عن الوضع الحالي.",
-      NA:"غير ذي صلة",
-      kfTitle:"الاستنتاجات الرئيسية والتوصية",
-      kf_overall_ex:"التقييم العام ممتاز.",
-      kf_overall_good:"التقييم العام جيد.",
-      kf_overall_avg:"التقييم العام متوسط؛ هناك حاجة للتحسين.",
-      kf_overall_poor:"التقييم العام أقل من المتوقع؛ يلزم تدخل كبير.",
-      kf_cat_low:"أقل فئة: ",
-      kf_role_gap:"فجوة بين الأدوار: ",
-      kf_reco_ex:"الحفاظ على المعايير والاستمرار على الخطة الحالية.",
-      kf_reco_good:"معالجة التحديات البسيطة في أقل فئة للوصول إلى التميز.",
-      kf_reco_avg:"إعطاء أولوية لتحسين أقل فئة في الدورة القادمة.",
-      kf_reco_poor:"إطلاق خطة تحسين عاجلة مع مؤشرات أداء وجداول زمنية.",
-      copyFindings:"نسخ الاستنتاجات"
-  }
-};
-
-const ALL_A = ["A1","A2","A3","A4","A5"];
-const ALL_B = ["B1","B2","B3","B4","B5"];
-const ALL_C = ["C1","C2","C3","C4"];
-
-function makeSliderRow(key, labelText, lang){
-  const row = document.createElement('div'); row.className='range-row';
-  row.innerHTML = `
-    <div>${labelText}</div>
-    <input type="range" min="1" max="5" step="1" value="3" data-k="${key}" data-na="0">
-    <div>3</div>
-    <label class="muted"><input type="checkbox" data-na-toggle="${key}"> ${I[lang].NA}</label>
-  `;
-  const slider = row.querySelector('input[type="range"]');
-  slider.addEventListener('input', e => { row.children[2].textContent = e.target.value; });
-  const naToggle = row.querySelector(`input[data-na-toggle="${key}"]`);
-  naToggle.addEventListener('change', e => {
-    const na = e.target.checked;
-    slider.disabled = na; slider.setAttribute('data-na', na ? '1':'0');
-    row.children[2].textContent = na ? '—' : slider.value;
-  });
-  return row;
-}
-
-function buildSections(){
-  ['secA','secB','secC'].forEach(id => document.getElementById(id).innerHTML='');
-  const lang = localStorage.getItem('lang') || 'en';
-  ALL_A.forEach(k => document.getElementById('secA').appendChild(makeSliderRow(k, I[lang][k]||k, lang)));
-  ALL_B.forEach(k => document.getElementById('secB').appendChild(makeSliderRow(k, I[lang][k]||k, lang)));
-  ALL_C.forEach(k => document.getElementById('secC').appendChild(makeSliderRow(k, I[lang][k]||k, lang)));
-}
-
-function applyLang(){
-  const langSel = document.getElementById('langSel'); const lang = langSel.value;
-  document.documentElement.dir = (lang==='ar') ? 'rtl' : 'ltr';
-  for (const el of document.querySelectorAll('[data-i]')){
-    const k = el.getAttribute('data-i'); if (I[lang][k]) el.textContent = I[lang][k];
-  }
-  document.getElementById('name').placeholder = (lang==='ar'?'مثال: أحمد':'e.g., Ahmed');
-  document.getElementById('scopeNote').textContent = I[lang].scopeEN;
-  buildSections();
-  if(isUnlocked()){ document.getElementById('adminBtn').innerHTML = (lang==='ar'?'الإدارة':'Admin') + ' ✅'; }
-}
-
-document.getElementById('langSel').addEventListener('change', ()=>{
-  localStorage.setItem('lang', document.getElementById('langSel').value); applyLang();
-});
-(function initLang(){ const saved = localStorage.getItem('lang') || 'en'; document.getElementById('langSel').value = saved; applyLang(); })();
-
-// data helpers
-function getAvgFor(keys){
-  let sum=0, count=0;
-  keys.forEach(k=>{
-    const slider = document.querySelector(`input[data-k="${k}"]`);
-    if(slider && slider.getAttribute('data-na')!=='1'){
-      sum += parseInt(slider.value,10); count += 1;
-    }
-  });
-  if(count===0) return 0;
-  return sum / count;
-}
-function nowISO(){ const d=new Date(); return d.toISOString().replace('T',' ').slice(0,19); }
-function loadAll(){ try{ return JSON.parse(localStorage.getItem('pitch_eval_data')||'[]'); }catch(e){ return []; } }
-function saveAll(arr){ localStorage.setItem('pitch_eval_data', JSON.stringify(arr)); }
-
-document.getElementById('btnSubmit').addEventListener('click', ()=>{
-  const role = document.getElementById('role').value;
-  const name = document.getElementById('name').value.trim();
-  const A = getAvgFor(ALL_A);
-  const B = getAvgFor(ALL_B);
-  const C = getAvgFor(ALL_C);
-  const overall = (A+B+C)/3;
-  const comments = document.getElementById('comments').value.trim();
-  const rec = {time: nowISO(), role, name, A, B, C, overall, comments};
-  const data = loadAll(); data.push(rec); saveAll(data);
-  const isAR = (localStorage.getItem('lang')||'en')==='ar';
-  document.getElementById('saveNote').textContent = isAR?'تم حفظ الاستجابة.':'Response saved.';
-  setTimeout(()=>{ document.getElementById('saveNote').textContent=''; }, 1600);
-  for(const inp of document.querySelectorAll('input[type="range"]')){ inp.value=3; inp.setAttribute('data-na','0'); inp.disabled=false; inp.dispatchEvent(new Event('input')); }
-  for(const ck of document.querySelectorAll('input[type="checkbox"][data-na-toggle]')){ ck.checked=false; }
-  document.getElementById('comments').value=''; if(name) document.getElementById('name').value='';
 });
 
-document.getElementById('btnClear').addEventListener('click', ()=>{
-  for(const inp of document.querySelectorAll('input[type="range"]')){ inp.value=3; inp.setAttribute('data-na','0'); inp.disabled=false; inp.dispatchEvent(new Event('input')); }
-  for(const ck of document.querySelectorAll('input[type="checkbox"][data-na-toggle]')){ ck.checked=false; }
-  document.getElementById('comments').value='';
-});
-
-function roleLabel(v, lang){
-  const map = {
-    football_director: (lang==='ar'?'مدير الكرة':'Football Director'),
-    head_coach: (lang==='ar'?'المدير الفني':'Head Coach'),
-    technical_staff: (lang==='ar'?'الجهاز الفني':'Technical Staff'),
-    player: (lang==='ar'?'لاعب':'Player'),
-    medical: (lang==='ar'?'الفريق الطبي':'Medical Team'),
-    administrative: (lang==='ar'?'الفريق الإداري':'Administrative Team')
+// Weighted calculation validation (dummy demo values)
+function calcWeighted(){
+  const data = [
+    {role:'head_coach',score:4.3},
+    {role:'football_director',score:4.1},
+    {role:'technical_staff',score:4.0},
+    {role:'player',score:4.2},
+    {role:'medical',score:4.1},
+    {role:'administrative',score:4.0}
+  ];
+  const weights = {
+    head_coach:20,football_director:20,technical_staff:20,
+    player:20,medical:10,administrative:10
   };
-  return map[v] || v;
-}
-
-function renderSummary(){
-  const lang = localStorage.getItem('lang') || 'en';
-  const data = loadAll();
-  const roles = ["football_director","head_coach","technical_staff","player","medical","administrative"];
-  const counts = {}; roles.forEach(r=>counts[r]=0); data.forEach(r=> counts[r.role]=(counts[r.role]||0)+1 );
-
-  // Participation text line with Total + per role
-  const total = data.length;
-  const partText = `${I[lang].total}: ${total} • ` + roles.map(r => `${roleLabel(r,lang)}: ${counts[r]||0}`).join(' • ');
-  document.getElementById('counts').textContent = partText;
-
-  // Averages
-  const avg = (k)=> data.length? (data.reduce((s,r)=>s+r[k],0)/data.length):0;
-  const avgA = avg('A'), avgB = avg('B'), avgC = avg('C');
-  const tbody = document.querySelector('#avgTable tbody'); tbody.innerHTML='';
-  [['A',avgA],['B',avgB],['C',avgC]].forEach(([k,v])=>{
-    const tr = document.createElement('tr');
-    const name = {A:(lang==='ar'?'أ. جودة الملعب':'A. Pitch Quality'),
-                  B:(lang==='ar'?'ب. كفاءة الصيانة':'B. Maintenance Effectiveness'),
-                  C:(lang==='ar'?'ج. التقييم العام':'C. Overall')}[k];
-    tr.innerHTML = `<td>${name}</td><td>${v? v.toFixed(2):'–'}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  // weights + overall weighted
-  const w = {
-    head_coach: parseInt(document.getElementById('w_hc').value,10),
-    football_director: parseInt(document.getElementById('w_fd').value,10),
-    technical_staff: parseInt(document.getElementById('w_ts').value,10),
-    player: parseInt(document.getElementById('w_pl').value,10),
-    medical: parseInt(document.getElementById('w_md').value,10),
-    administrative: parseInt(document.getElementById('w_ad').value,10)
-  };
-  const sumW = Object.values(w).reduce((a,b)=>a+b,0) || 1;
-  function avgRole(role){
-    const rs = data.filter(r=>r.role===role);
-    return rs.length? (rs.reduce((s,r)=>s+r.overall,0)/rs.length):0;
-    }
-  let overallWeighted = 0;
-  Object.keys(w).forEach(role=>{ overallWeighted += (avgRole(role) * w[role]); });
-  overallWeighted /= sumW;
-  document.getElementById('overallScore').textContent = data.length? overallWeighted.toFixed(2):'–';
-
-  // responses table
-  const tb = document.querySelector('#respTable tbody'); tb.innerHTML='';
-  data.slice().reverse().forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.time}</td><td>${roleLabel(r.role,lang)}</td><td>${r.A.toFixed(2)}</td><td>${r.B.toFixed(2)}</td><td>${r.C.toFixed(2)}</td><td>${r.overall.toFixed(2)}</td>`;
-    tb.appendChild(tr);
-  });
-
-  // --- Key Findings & Recommendation ---
-  (function(){
-    const L = I[lang];
-    const cats = [{k:'A',v:avgA},{k:'B',v:avgB},{k:'C',v:avgC}].sort((a,b)=>a.v-b.v);
-    const lowest = cats[0];
-    let overallMsg, reco;
-    const ow = overallWeighted || 0;
-    if (ow >= 4.5){ overallMsg = L.kf_overall_ex; reco = L.kf_reco_ex; }
-    else if (ow >= 3.5){ overallMsg = L.kf_overall_good; reco = L.kf_reco_good; }
-    else if (ow >= 2.5){ overallMsg = L.kf_overall_avg; reco = L.kf_reco_avg; }
-    else { overallMsg = L.kf_overall_poor; reco = L.kf_reco_poor; }
-    const roleKeys = ['head_coach','football_director','technical_staff','player','medical','administrative'];
-    const roleAvgs = roleKeys.map(rk => ({rk, v: avgRole(rk) || 0}));
-    const minRole = roleAvgs.reduce((m,x)=> x.v<m.v?x:m, roleAvgs[0]||{rk:'',v:0});
-    const maxRole = roleAvgs.reduce((m,x)=> x.v>m.v?x:m, roleAvgs[0]||{rk:'',v:0});
-    let gapTxt = '';
-    if ((maxRole.v - minRole.v) >= 0.5){
-      const rname = (r)=>roleLabel(r, lang);
-      gapTxt = L.kf_role_gap + rname(minRole.rk) + ' (' + (minRole.v?minRole.v.toFixed(2):'–') + ') vs ' + rname(maxRole.rk) + ' (' + (maxRole.v?maxRole.v.toFixed(2):'–') + ').';
-    }
-    const catName = lowest.k==='A' ? (lang==='ar'?'أ. جودة الملعب':'A. Pitch Quality')
-                   : lowest.k==='B' ? (lang==='ar'?'ب. كفاءة الصيانة':'B. Maintenance Effectiveness')
-                   : (lang==='ar'?'ج. التقييم العام':'C. Overall');
-    const msg = [
-      overallMsg,
-      L.kf_cat_low + catName + ' (' + (lowest.v?lowest.v.toFixed(2):'–') + ').',
-      gapTxt,
-      reco
-    ].filter(Boolean).join(' ');
-    const box = document.getElementById('findingsText');
-    if (box) box.textContent = msg || '–';
-  })();
-
-  // charts
-  drawBarChart('barChart', [avgA, avgB, avgC, overallWeighted],
-    [(lang==='ar'?'أ':'A'), (lang==='ar'?'ب':'B'), (lang==='ar'?'ج':'C'), (lang==='ar'?'العام':'Overall')], 5);
-
-  // participation chart
-  const partLabels = roles.map(r=>roleLabel(r,lang));
-  const partVals = roles.map(r=>counts[r]||0);
-  const maxPart = Math.max(5, ...partVals); // dynamic max so bars scale
-  document.getElementById('partCounts').textContent = partText;
-  drawBarChart('partChart', partVals, partLabels, maxPart);
-}
-
-// weights listeners
-['w_hc','w_fd','w_ts','w_pl','w_md','w_ad'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{ 
-    document.getElementById(id+'_v').textContent = document.getElementById(id).value; 
-    renderSummary();
-  });
-});
-
-document.getElementById('btnReset').addEventListener('click', ()=>{
-  if(confirm('Reset all stored responses?')){ localStorage.removeItem('pitch_eval_data'); renderSummary(); }
-});
-
-// Export JSON
-document.getElementById('btnExport').addEventListener('click', ()=>{
-  const blob = new Blob([localStorage.getItem('pitch_eval_data')||'[]'], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pitch_evaluation_responses.json'; a.click();
-});
-
-// Export CSV
-document.getElementById('btnCSV').addEventListener('click', ()=>{
-  const rows = JSON.parse(localStorage.getItem('pitch_eval_data')||'[]');
-  const header = ['time','role','name','A','B','C','overall','comments'];
-  const csv = [header.join(',')].concat(rows.map(r => header.map(h => {
-    const v = (r[h]!==undefined && r[h]!==null) ? String(r[h]) : '';
-    return '"' + v.replace(/"/g,'""') + '"';
-  }).join(','))).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='pitch_evaluation_responses.csv'; a.click();
-});
-
-// PDF (print summary only; findings hidden by @media print)
-document.getElementById('btnPDF').addEventListener('click', ()=>{ renderSummary(); window.print(); });
-
-// Copy findings
-(function(){
-  const btn = document.getElementById('btnCopyFindings');
-  if(btn){
-    const lang = localStorage.getItem('lang') || 'en';
-    btn.textContent = I[lang].copyFindings || 'Copy findings';
-    btn.addEventListener('click', async ()=>{
-      const txt = document.getElementById('findingsText')?.textContent || '';
-      try{
-        await navigator.clipboard.writeText(txt);
-        btn.textContent = (lang==='ar'?'تم النسخ':'Copied!');
-        setTimeout(()=>{ btn.textContent = I[lang].copyFindings || 'Copy findings'; }, 1200);
-      }catch(e){
-        const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-        btn.textContent = (lang==='ar'?'تم النسخ':'Copied!');
-        setTimeout(()=>{ btn.textContent = I[lang].copyFindings || 'Copy findings'; }, 1200);
-      }
-    });
+  let sumW=0, total=0;
+  for(const r of data){
+    if(r.score>0){sumW+=weights[r.role]; total+=r.score*weights[r.role];}
   }
-})();
-
-// generic bar chart (with dynamic max)
-function drawBarChart(id, vals, labels, maxVal){
-  const c = document.getElementById(id), ctx = c.getContext('2d');
-  ctx.clearRect(0,0,c.width,c.height);
-  const pad=30, W=c.width, H=c.height;
-  const max = Math.max(1, maxVal || 5);
-  const bw = (W - pad*2) / vals.length * 0.6;
-  const gap = (W - pad*2) / vals.length * 0.4;
-  ctx.strokeStyle='#e5e7eb'; ctx.beginPath(); ctx.moveTo(pad, H - pad); ctx.lineTo(W - pad, H - pad); ctx.stroke();
-  vals.forEach((v,i)=>{
-    const x = pad + i*(bw+gap);
-    const h = (H - pad*2) * ((v||0)/max);
-    const y = H - pad - h;
-    ctx.fillStyle = '#111827'; ctx.fillRect(x, y, bw, h);
-    ctx.fillStyle = '#6b7280'; ctx.textAlign='center';
-    ctx.fillText(labels[i], x+bw/2, H - pad + 16);
-    ctx.fillText((v!==undefined && v!==null) ? String(v) : '–', x+bw/2, y - 4);
-  });
+  const res=(sumW>0)?(total/sumW).toFixed(2):'–';
+  document.getElementById('weightedScore').textContent=res;
 }
+calcWeighted();
 
-// QR placeholder (client-side pseudo QR so you can download a PNG)
-function drawFakeQR(text, size){
-  const c = document.getElementById('qrCanvas'), ctx=c.getContext('2d');
-  ctx.clearRect(0,0,size,size);
-  let h=0; for(let i=0;i<text.length;i++) h=(h*31 + text.charCodeAt(i))>>>0;
-  const cells=29, cell=Math.floor(size/cells);
-  for(let r=0;r<cells;r++){
-    for(let col=0;col<cells;col++){
-      const v=((h + r*97 + col*131) % 11) > 5;
-      ctx.fillStyle = v ? '#000':'#fff';
-      ctx.fillRect(col*cell, r*cell, cell, cell);
-    }
+// Reset all data
+document.getElementById('btnResetAll').addEventListener('click',()=>{
+  if(confirm('This will erase all saved results and notes. Continue?')){
+    localStorage.clear();
+    alert('All data cleared.');
+    location.reload();
   }
-  ctx.strokeStyle='#e5e7eb'; ctx.strokeRect(0,0,size,size);
-}
-document.getElementById('btnQR').addEventListener('click', ()=>{
-  const url = document.getElementById('qrURL').value.trim() || location.href;
-  drawFakeQR(url, 240);
 });
-document.getElementById('btnQRSave').addEventListener('click', ()=>{
-  const c = document.getElementById('qrCanvas');
-  const a = document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='pitch_eval_qr.png'; a.click();
-});
-
-// tabs
-function showTab(id){
-  if(['summary','method','qr'].includes(id) && !isUnlocked()){ 
-    alert((localStorage.getItem('lang')||'en')==='ar'?'الرجاء إدخال كلمة المرور عبر زر الإدارة':'Please unlock via the Admin button.'); 
-    return;
-  }
-  for (const sec of ['survey','summary','method','qr']){
-    document.getElementById(sec).style.display = (sec===id)?'block':'none';
-    const btn = document.getElementById('tab'+sec.charAt(0).toUpperCase()+sec.slice(1));
-    if(btn) btn.classList.toggle('active', sec===id);
-  }
-  if(id==='summary') renderSummary();
-}
-document.querySelectorAll('.tabbar button').forEach(b=> b.addEventListener('click', ()=> showTab(b.dataset.tab)));
-
-// initial build
-function init(){
-  buildSections();
-  showProtectedTabs(isUnlocked());
-}
-init();
 </script>
 </body>
 </html>
